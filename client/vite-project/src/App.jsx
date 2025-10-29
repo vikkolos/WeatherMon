@@ -9,28 +9,68 @@ function App() {
   const [searchValue, setSearchValue] = useState("");
   const [places, setPlaces] = useState([]);
   const [location, setLocation] = useState(null);
+  const [locationState, setLocationState] = useState(null);
+  const [lat,setLat] = useState(null);
+  const [long,setLong] = useState(null);
+  const [climateData,setClimateData]=useState(null);
 
-  const getCurrentLoc = function () {
+  const getLocationName = async (latitude,longitude) => {
+    try {
+      console.log("lat",latitude)
+      console.log("lon",longitude)
+      const res = await fetch(
+        `https://api.geoapify.com/v1/geocode/reverse?lat=${latitude}&lon=${longitude}&apiKey=0677ed6e3faf44edb0dc4e07b25cd85f`
+        // `https://api.geoapify.com/v1/geocode/reverse?lat=12.956943&lon=77.5279455&apiKey=0677ed6e3faf44edb0dc4e07b25cd85f`
+      );
+      const data = await res.json();
+      console.log(data)// gives full address
+      setLocation(data.features[0].properties.city)
+      setLocationState(data.features[0].properties.state)
+      console.log("location ",location)
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const getCurrentLoc = async () => {
     if (!navigator.geolocation) {
-      console.error("Your brwser doset support geolocation");
+      console.error("Your browser doesn’t support geolocation");
       return;
     }
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject);
+      });
+      const { latitude, longitude } = position.coords;
+      console.log("📍 Got location:", latitude, longitude);
+      setLat(latitude);
+      setLong(longitude);
+      // Call reverse geocoding after location is obtained
+      await getLocationName(latitude, longitude);
+    } catch (error) {
+      console.error("Error getting location:", error);
+      alert("Can't find location, please enter manually.");
+    }
+  };
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        console.log(position);
-        const { latitude, longitude } = position.coords;
-        setLocation({ latitude, longitude });
-      },
-      (error) => {
-        console.error("Your brwser doset support geolocation");
-        alert("cant find location enter manually ");
-      }
-    );
+  const getCoordsUsingName = async()=>{
+  try {
+    const response = await axios.get(`https://api.geoapify.com/v1/geocode/search?text=${searchValue}&apiKey=0677ed6e3faf44edb0dc4e07b25cd85f`)
+    console.log("lat and long data using name",response)
+    let {lat,lon} =response.data.features[0].properties
+    console.log(lat,lon)
+    getLocationName(lat,lon)
+  } catch (error) {
+    console.error(error)
+  }
+  };
+
+  const getClimateData = async ()=>{
+
   };
 
   useEffect(() => {
-    getCurrentLoc();
+     getCurrentLoc();
   }, []);
 
   useEffect(() => {
@@ -82,7 +122,7 @@ function App() {
 
         <div className=" w-230 h-[65.3vh] bg-[#0100f2] absolute z-10 ml-50 mt-30 text-amber-50 text-6xl ">
           <div className="bg-white w-[60%] h-[54%] left-9 absolute top-15 rounded-lg">
-            
+          <div> </div>
           </div>
           <div className="bg-white w-[60%] h-[25%] left-9 absolute top-[68.8%] rounded-lg">
             
@@ -106,8 +146,8 @@ function App() {
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
           />
-          <button className="w-20 h-full border-l-2 items-center flex justify-center pt-0.5">
-            <IoSearch size={30} />
+          <button type="Submit" className="w-20 h-full border-l-2 items-center flex justify-center pt-0.5 hover:bg-[#1b3dff] rounded-r-sm hover:text-white transition duration-200" onClick={getCoordsUsingName} onSubmit={getCoordsUsingName}>
+            <IoSearch size={30} className=" hover:text-white"/>
           </button>
         </div>
         {places.length > 0 && (
@@ -129,11 +169,15 @@ function App() {
           </div>
         )}
 
-        <div className="w-auto h-20 absolute left-[70%] z-11 bg-white border-black border-2 top-20 rounded-lg text-black flex items-center justify-evenly gap-1">
-        <div className="p-2 ml-2">
+       
+
+         <div className="min-w-45 w-auto h-20 absolute left-[70%] z-11 bg-white border-black border-2 top-20 rounded-lg text-black flex items-center justify-evenly ">
+        <div className="p-2 ml-1">
           <MdOutlineLocationOn size={25} />
         </div>
-        <h3 className="p-2 mr-2 font-bold text-lg">Get Current Location</h3>
+        {location?(
+        <h3 className="p-0 mr-3 mb-0.5 font-bold text-lg">{location} {" "},{"  "}{locationState}</h3>
+        ): <h3 className="p-1 mr-3 mb-0.5 font-bold text-lg">loading...</h3>}
         </div>
       </div>
     </>
