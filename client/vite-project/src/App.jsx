@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import axios from "axios";
 import "./App.css";
 import { IoSearch } from "react-icons/io5";
@@ -13,6 +13,8 @@ function App() {
   const [lat,setLat] = useState(null);
   const [long,setLong] = useState(null);
   const [climateData,setClimateData]=useState(null);
+  const [temp,setTemp]=useState(null)
+  
 
   const getLocationName = async (latitude,longitude) => {
     try {
@@ -45,8 +47,9 @@ function App() {
       console.log("📍 Got location:", latitude, longitude);
       setLat(latitude);
       setLong(longitude);
-      // Call reverse geocoding after location is obtained
       await getLocationName(latitude, longitude);
+      getClimateData(latitude,longitude);
+      // Call reverse geocoding after location is obtained
     } catch (error) {
       console.error("Error getting location:", error);
       alert("Can't find location, please enter manually.");
@@ -59,13 +62,19 @@ function App() {
     console.log("lat and long data using name",response)
     let {lat,lon} =response.data.features[0].properties
     console.log(lat,lon)
+    setLat(lat)
+    setLong(lon)
     getLocationName(lat,lon)
+    getClimateData(lat,lon);
   } catch (error) {
     console.error(error)
   }
   };
 
-  const getClimateData = async ()=>{
+  const getClimateData = async (latitude,longitude)=>{
+      const { data } =await axios.get(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=sunrise,sunset,sunshine_duration&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,visibility,wind_speed_10m,wind_direction_10m,uv_index,rain,precipitation_probability,precipitation,is_day&current=temperature_2m,wind_gusts_10m,rain,wind_speed_10m,apparent_temperature,relative_humidity_2m,is_day,precipitation&timezone=auto&forecast_hours=24&past_hours=24`)
+      setClimateData(data);
+      setTemp(data.current.temperature_2m)
 
   };
 
@@ -98,7 +107,11 @@ function App() {
     // cleanup function to cancel old timers
     return () => clearTimeout(timeout);
   }, [searchValue]);
+  useEffect(()=>{
+    if(!climateData) return;
+    console.log(temp)
 
+  },[climateData])
   return (
     <>
       <div className="min-h-screen w-full bg-white relative max-w-[1442px] mx-auto">
@@ -120,15 +133,53 @@ function App() {
           <p className=" text-3xl font-extrabold inset-0 mb-1">WeatherMon</p>
         </div>
 
-        <div className=" w-230 h-[65.3vh] bg-[#0100f2] absolute z-10 ml-50 mt-30 text-amber-50 text-6xl ">
-          <div className="bg-white w-[60%] h-[54%] left-9 absolute top-15 rounded-lg">
-          <div> </div>
-          </div>
+        <div className=" w-230 h-[65.3vh] bg-[#0100f2] absolute z-10 ml-50 mt-30 ">
+
+          <div className="bg-white w-[60%] h-[54%] left-9 absolute top-15 rounded-lg  text-black ">
+            { climateData?( 
+            <div>
+                <h1 className="p-2 pl-5 text-2xl font-bold mt-3.5"> 
+                   Temperature :
+                </h1>
+                <div className="h=30 w-full m-1 pt-2 ">
+                    <span className="text-6xl font-extrabold p-3 pl-4">{temp}</span>
+                    <span className="text-6xl font-extrabold ">{climateData.current_units.temperature_2m}</span>
+                </div>
+                <div className="flex  rounded-lg w-full p-3 mt-15 gap-2 pl-2">
+                  <div className="bg-[#0100f2] text-white p-3 rounded-lg w-[50%] flex">
+                    <h3 className="text-xl font-bold">Feels Like :</h3>
+                    <div><span className="text-xl font-bold pl-8">{climateData.current.apparent_temperature}</span>{" "}
+                    <span className="text-xl font-extrabold ">{climateData.current_units.temperature_2m}</span>
+                    </div>
+                  </div>
+                  <div className="bg-[#0100f2] text-white p-3 rounded-lg w-[50%] flex h-20">
+                    <h3 className="text-xl font-bold">Rain :</h3>
+                    <div><span className="text-xl font-bold pl-8">{climateData.current.rain}</span>{" "}<span className="text-xl font-bold">{climateData.current_units.rain}</span></div>
+                  </div>
+                  
+                  
+                </div>
+            </div>
+
+                ):(
+                  <div className="text-center text-3xl font-extrabold items-center flex justify-center"><h3>Select Location for data</h3></div>
+                )
+            }
+          </div>              
+               
           <div className="bg-white w-[60%] h-[25%] left-9 absolute top-[68.8%] rounded-lg">
             
           </div>
-          <div className="bg-white w-[30%] h-[25%] left-[64%] ml-3.5 absolute top-15 rounded-lg">
-
+          <div className="bg-white w-[30%] h-[25%] left-[64%] ml-3.5 absolute top-15 rounded-lg p-4">
+              {climateData?(
+                <div className="">
+                <h1 className="text-2xl font-extrabold m-2">Wind Speed :</h1>
+                <span className="text-3xl font-bold ml-2">{climateData.current.wind_speed_10m}</span> 
+                {" "}
+                <span className="text-3xl font-bold">{climateData.current_units.wind_speed_10m}</span>
+                </div>
+                ):( <div> </div>)
+              }
           </div>
           <div className="bg-white w-[30%] h-[25%] left-[64%] ml-3.5 absolute top-[40%] rounded-lg">
 
